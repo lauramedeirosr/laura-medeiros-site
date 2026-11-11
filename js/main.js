@@ -10,6 +10,8 @@
   const $ = (s, el = document) => el.querySelector(s);
   const $$ = (s, el = document) => [...el.querySelectorAll(s)];
   const el = (tag, cls, txt) => { const n = document.createElement(tag); if (cls) n.className = cls; if (txt != null) n.textContent = txt; return n; };
+  // Idiomas (js/i18n.js): textos da interface e projetos no idioma atual
+  const I = window.I18N || { t: (k) => k, tn: (k, n) => k + ' ' + n, loc: (p) => Object.assign({}, p, { _pt: p }) };
 
   /* 1 — Medida ---------------------------------------------------------
      Ajusta a largura variável (wdth) da fonte para que cada linha ocupe
@@ -264,10 +266,12 @@
   /* 3 — Projetos -------------------------------------------------------- */
   const list = $('[data-projetos]');
   const data = Array.isArray(window.PROJETOS) ? window.PROJETOS : [];
-  const projetos = data.filter((p) => !p.emPreparacao);
-  const slots = data.filter((p) => p.emPreparacao);
+  const brutos = data.filter((p) => !p.emPreparacao);
+  const slots = data.filter((p) => p.emPreparacao && p.segmento);
+  let projetos = [];
   const formatos = ['amplo', 'retrato', 'paisagem', 'panorama'];
   const covers = []; // { wm, host, ratio }
+  const isDemo = (p) => p._pt.tipo === 'Demonstração';
 
   function coverLines(p) {
     const raw = (p.capa || p.nome || '').split(/<br\s*\/?>/i).map((s) => s.replace(/<[^>]+>/g, '').trim()).filter(Boolean);
@@ -299,7 +303,10 @@
     if (h > max) fitWordmark(c.wm, target * max / h);
   }
 
-  if (list) {
+  function renderProjects(revealNow) {
+    projetos = brutos.map(I.loc);
+    $$('.proj', list).forEach((n) => n.remove());
+    covers.length = 0;
     projetos.forEach((p, idx) => {
       const fmt = formatos.includes(p.formato) ? p.formato : formatos[idx % formatos.length];
       const art = el('article', 'proj proj--' + fmt);
@@ -307,7 +314,7 @@
 
       const open = el('button', 'proj__open');
       open.type = 'button';
-      open.setAttribute('aria-label', 'Abrir projeto ' + p.nome);
+      open.setAttribute('aria-label', I.tn('proj.open', p.nome));
       open.dataset.index = idx;
       const frame = el('div', 'proj__frame');
       const media = el('div', 'proj__media');
@@ -333,31 +340,34 @@
       }
       const actions = el('div', 'proj__actions');
       const more = el('button', 'proj__more'); more.type = 'button'; more.dataset.index = idx;
-      more.innerHTML = 'Ver projeto <span class="arrow" aria-hidden="true">→</span>';
-      more.setAttribute('aria-label', 'Ver detalhes do projeto ' + p.nome);
+      more.innerHTML = I.t('proj.see') + ' <span class="arrow" aria-hidden="true">→</span>';
+      more.setAttribute('aria-label', I.tn('proj.seeAria', p.nome));
       actions.appendChild(more);
       if (p.demo) {
         const site = el('a', 'proj__site'); site.href = p.demo; site.target = '_blank'; site.rel = 'noopener';
-        site.innerHTML = (p.tipo === 'Demonstração' ? 'Ver demonstração' : 'Ver site') + ' <span class="arrow" aria-hidden="true">↗</span>';
-        site.setAttribute('aria-label', (p.tipo === 'Demonstração' ? 'Ver demonstração de ' : 'Ver site de ') + p.nome + ' (abre em nova aba)');
+        site.innerHTML = I.t(isDemo(p) ? 'proj.demo' : 'proj.site') + ' <span class="arrow" aria-hidden="true">↗</span>';
+        site.setAttribute('aria-label', I.tn(isDemo(p) ? 'proj.demoAria' : 'proj.siteAria', p.nome));
         actions.appendChild(site);
       }
       meta.appendChild(actions);
 
       art.append(open, meta);
+      if (revealNow) art.classList.add('in');
       list.appendChild(art);
     });
 
-    if (slots.length && window.MOSTRAR_EM_PREPARACAO !== false) {
-      const box = $('[data-slots]');
+    const box = $('[data-slots]');
+    if (box && slots.length && window.MOSTRAR_EM_PREPARACAO !== false) {
+      box.innerHTML = '';
       slots.forEach((s) => {
         const li = el('li', 'soon__item');
-        li.append(el('span', 'soon__t', s.segmento || 'Nova demonstração'), el('span', 'soon__s', 'Em preparação'));
+        li.append(el('span', 'soon__t', I.loc(s).segmento), el('span', 'soon__s', I.t('proj.soon')));
         box.appendChild(li);
       });
       $('[data-proximos]').hidden = false;
     }
   }
+  if (list) renderProjects(false);
 
   /* 4 — Painel do projeto ---------------------------------------------- */
   const dlg = $('[data-case]');
@@ -377,16 +387,16 @@
     $('[data-case-title]', dlg).textContent = p.nome;
     $('[data-case-desc]', dlg).textContent = p.descricao || '';
     const grid = $('[data-case-grid]', dlg); grid.innerHTML = '';
-    if (p.objetivo) grid.appendChild(block('Objetivo', p.objetivo));
-    if (p.solucao) grid.appendChild(block('Solução desenvolvida', p.solucao));
-    if (p.funcionalidades && p.funcionalidades.length) grid.appendChild(block('Funcionalidades e diferenciais', p.funcionalidades));
+    if (p.objetivo) grid.appendChild(block(I.t('case.goal'), p.objetivo));
+    if (p.solucao) grid.appendChild(block(I.t('case.solution'), p.solucao));
+    if (p.funcionalidades && p.funcionalidades.length) grid.appendChild(block(I.t('case.features'), p.funcionalidades));
     const act = $('[data-case-actions]', dlg); act.innerHTML = '';
     if (p.demo) {
       const a = el('a', 'btn btn--wine'); a.href = p.demo; a.target = '_blank'; a.rel = 'noopener';
-      a.innerHTML = (p.tipo === 'Demonstração' ? 'Ver demonstração' : 'Ver site') + ' <span class="arrow" aria-hidden="true">↗</span>'; act.appendChild(a);
+      a.innerHTML = I.t(isDemo(p) ? 'proj.demo' : 'proj.site') + ' <span class="arrow" aria-hidden="true">↗</span>'; act.appendChild(a);
     }
     const talk = el('a', 'btn btn--line'); talk.href = '#contato';
-    talk.innerHTML = 'Conversar sobre um projeto assim <span class="arrow" aria-hidden="true">↗</span>';
+    talk.innerHTML = I.t('case.talk') + ' <span class="arrow" aria-hidden="true">↗</span>';
     talk.addEventListener('click', () => dlg.close());
     act.appendChild(talk);
     if (typeof dlg.showModal === 'function') dlg.showModal(); else dlg.setAttribute('open', '');
@@ -411,9 +421,16 @@
   let rt = 0;
   window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(refitAll, 120); });
 
+  /* Troca de idioma: refaz os projetos e fecha o painel aberto */
+  document.addEventListener('langchange', () => {
+    if (dlg && dlg.open) dlg.close();
+    if (list) { renderProjects(true); covers.forEach(fitCover); }
+    const f = $('.follow'); if (f) f.textContent = I.t('proj.see');
+  });
+
   /* 5 — Rótulo que acompanha o cursor nos projetos ---------------------- */
   if (fine && !reduce) {
-    const f = el('div', 'follow', 'Ver projeto'); f.setAttribute('aria-hidden', 'true');
+    const f = el('div', 'follow', I.t('proj.see')); f.setAttribute('aria-hidden', 'true');
     document.body.appendChild(f);
     let fx = 0, fy = 0, raf = 0;
     const paint = () => { f.style.transform = `translate3d(${fx + 14}px,${fy + 14}px,0)`; raf = 0; };
@@ -450,15 +467,21 @@
 
   /* 7 — Abordagem: o texto vai sendo lido com a rolagem ----------------- */
   const read = $('[data-read]');
+  let readUpdate = null;
   if (read) {
-    const text = read.textContent.trim();
-    read.setAttribute('aria-label', text);
-    read.innerHTML = text.split(/\s+/).map((w) => '<span class="w" aria-hidden="true">' + w + '</span>').join(' ');
-    const spans = $$('.w', read);
-    if (reduce) spans.forEach((s) => s.classList.add('on'));
-    else {
+    let spans = [];
+    const setRead = (text) => {
+      read.setAttribute('aria-label', text);
+      read.innerHTML = text.split(/\s+/).map((w) => '<span class="w" aria-hidden="true">' + w + '</span>').join(' ');
+      spans = $$('.w', read);
+      if (reduce) spans.forEach((s) => s.classList.add('on'));
+      else if (readUpdate) readUpdate();
+    };
+    setRead(I.t('manifesto'));
+    document.addEventListener('langchange', () => setRead(I.t('manifesto')));
+    if (!reduce) {
       let ticking = false;
-      const update = () => {
+      const update = readUpdate = () => {
         const r = read.getBoundingClientRect(), vh = window.innerHeight;
         const p = Math.min(1, Math.max(0, (vh * 0.85 - r.top) / (r.height + vh * 0.35)));
         const n = Math.round(p * spans.length);

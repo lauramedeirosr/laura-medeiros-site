@@ -5,6 +5,7 @@ ESTRUTURA
 - index.html ............ conteúdo e seções
 - css/styles.css ........ identidade visual (tokens no topo), layout e responsivo
 - js/projects.js ........ LISTA DE PROJETOS: o único arquivo para editar projetos
+- js/i18n.js ............ IDIOMAS: textos em inglês e espanhol (o português fica no index.html)
 - js/main.js ............ interações (projetos, painel de caso, serviços, animações)
 - assets/projetos/ ...... imagens dos projetos (uma pasta por projeto)
 - _arquivo-v3/ .......... versão anterior, só para consulta (pode apagar)
@@ -21,7 +22,7 @@ COMO ADICIONAR OU ATUALIZAR UM PROJETO
    (ideal: 2000px de largura, JPG ou WebP, até ~400 KB)
 2. Em js/projects.js, preencha os campos do projeto: imagem, imagemAlt,
    funcionalidades e demo. Sem imagem, a capa é tipográfica, com o nome do projeto ajustado à medida.
-3. Para uma nova demonstração (05–07), troque um { emPreparacao: true }
+3. Para um projeto novo, troque o { emPreparacao: true, ... }
    por um projeto completo, seguindo o modelo dos outros.
 4. Para esconder os slots "em preparação": MOSTRAR_EM_PREPARACAO = false.
 
